@@ -133,10 +133,29 @@ Fear boostet). Abfrage: `select * from sonar_leaderboard;`
 - **Konfidenz-Dämpfung** bei wenig absoluten Mentions; `has_volume=false` →
   nur halbe HypePenalty (fehlende Daten ≠ flaches Volumen).
 
+## Schicht 3 — Strategie-Vorschläge v1 (gebaut)
+
+Migration `0006`. Wandelt die Top-Kandidaten des jüngsten Score-Laufs in
+strukturierte Vorschläge (Spec §6): Einstieg, Stop-Loss, Take-Profit,
+Positionsgröße (% vom Risiko-Budget), Konfidenz, Begründung, **explizite
+Gegenargumente** → Tabelle `proposals`, Status `proposed`.
+
+- **`generate_proposals()`**: on-demand (bewusst nicht per Cron → kein Spam).
+  `select public.generate_proposals();` erzeugt Vorschläge; ansehen mit
+  `select * from proposals where status='proposed' order by created_at desc;`.
+- **`strategy_config`**: `top_n`, `min_score`, `stop_pct`, `tp_pct`,
+  `max_position_pct`, `require_volume` — kalibrierbar ohne Code.
+- **Volumen-Bestätigung ist Pflicht** (Spec §5): nur Kandidaten mit Volumen
+  bekommen einen Vorschlag. Positionsgröße/Konfidenz skalieren mit dem Score.
+
+**v1 ist regelbasiert** (transparent, deterministisch, kein Key). Die
+Claude-Urteils-Schicht (Spec: „Claude via MCP" — reichere Begründung, echtes
+Abwägen) ist der nächste Aufsatz und braucht einen Anthropic-Key.
+
 ## Nächster Schritt
 
-Schicht 3 (Strategie): Top-N aus `sonar_leaderboard` + Kontext an Claude (MCP)
-→ strukturierter Vorschlag (Einstieg/Stop/Take-Profit/Positionsgröße/
-Gegenargumente) in `proposals`. Parallel: Historie sammeln lassen, um Momentum-
-und Volumen-Komponenten auf eigene 7-Tage-Schnitte umzustellen und die Gewichte
-per Forward-Test zu kalibrieren.
+1. **Claude-Urteils-Schicht:** Edge Function reicht Top-N + Kontext an die
+   Claude-API → ersetzt die regelbasierte Begründung durch echtes Abwägen.
+2. **Historie → Kalibrierung:** Momentum/Volumen auf eigene 7-Tage-Schnitte
+   umstellen, Gewichte per Forward-Test kalibrieren (Spec §13).
+3. **Mini-Dashboard:** Read-only-Ansicht von `sonar_leaderboard` + `proposals`.
