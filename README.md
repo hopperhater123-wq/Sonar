@@ -101,10 +101,42 @@ order by start_time desc limit 10;
   `sourceErrors`, alle anderen Quellen laufen normal.
 - **Keine Secrets im Frontend / im Repo.** Alles serverseitig (Spec §3).
 
+## Schicht 2 — SonarScore v1 (gebaut)
+
+Reines Postgres (Migrationen `0004`/`0005`), läuft in der DB, per pg_cron 5 Min
+nach jedem Ingest (`sonar-score`, `:05/:35`).
+
+- **`symbol_features`** (View): neueste Kennzahlen je Krypto-Symbol, Symbole
+  normalisiert (`BTC.X`→`BTC`), Mentions (ApeWisdom) mit Preis/Volumen
+  (CoinGecko/Coinpaprika/DexScreener) gejoint.
+- **`sonar_score_run()`** (Funktion): rechnet die fünf Komponenten aus Spec §5
+  und schreibt nach `scores`.
+- **`sonar_leaderboard`** (View): Top-N des jüngsten Laufs.
+- **`score_config`** / **`score_exclude`**: Gewichte + Schwellen bzw. Ausschluss
+  (Stablecoins/Wrapped) — kalibrierbar ohne Codeänderung.
+
+```
+SonarScore = fg_factor · ( w1·MentionsMomentum + w2·SentimentPolarity
+                         + w3·PriceMomentum + w4·VolumeConfirmation − w5·HypePenalty )
+```
+
+Fear & Greed wirkt contrarian als `fg_factor` (Extreme Greed dämpft, Extreme
+Fear boostet). Abfrage: `select * from sonar_leaderboard;`
+
+**Ehrliche Grenzen von v1** (Spec: „Kein Wahrsager"):
+- **SentimentPolarity = 0 (dormant)** — noch keine Sentiment-Quelle aktiv
+  (Reddit deferred, News nur Schlagzeilen).
+- **MentionsMomentum** nutzt ApeWisdoms 24h-Delta, noch nicht den eigenen
+  7-Tage-Schnitt — wird schärfer, sobald mehr Historie gesammelt ist.
+- **VolumeConfirmation** ist eine Volumen-*Stärke* (log-skaliert), noch kein
+  Volumen-*Anstieg* gegen den eigenen Schnitt (braucht Historie).
+- **Konfidenz-Dämpfung** bei wenig absoluten Mentions; `has_volume=false` →
+  nur halbe HypePenalty (fehlende Daten ≠ flaches Volumen).
+
 ## Nächster Schritt
 
-**SonarScore v1** (Schicht 2): pro Symbol über alle Quellen aggregieren
-(Mentions von ApeWisdom + Volumen von CoinGecko/Coinpaprika joinen), die fünf
-Komponenten aus Spec §5 rechnen (MentionsMomentum, SentimentPolarity,
-PriceMomentum, VolumeConfirmation, − HypePenalty), mit Fear & Greed als
-Gesamtfilter → `scores`.
+Schicht 3 (Strategie): Top-N aus `sonar_leaderboard` + Kontext an Claude (MCP)
+→ strukturierter Vorschlag (Einstieg/Stop/Take-Profit/Positionsgröße/
+Gegenargumente) in `proposals`. Parallel: Historie sammeln lassen, um Momentum-
+und Volumen-Komponenten auf eigene 7-Tage-Schnitte umzustellen und die Gewichte
+per Forward-Test zu kalibrieren.
