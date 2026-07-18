@@ -1,0 +1,15 @@
+# Secrets — niemals committen
+.env
+.env.local
+.env.*.local
+
+# Node/Deno-Artefakte
+node_modules/
+dist/
+
+# Supabase CLI
+supabase/.branches/
+supabase/.temp/
+
+# OS
+.DS_Store

@@ -1,0 +1,9 @@
+# Supabase-CLI-Konfiguration für Sonar.
+# project_id wird beim ersten `supabase link` gesetzt bzw. hier eingetragen.
+project_id = "drwueulymfgfvgslxgay"
+
+[functions.ingest]
+# Die Ingest-Function ist öffentlich per HTTP aufrufbar (Cron/manuell),
+# schreibt aber ausschließlich mit der Service-Role. JWT-Prüfung aus,
+# damit ein Scheduler sie ohne User-Token triggern kann.
+verify_jwt = false
