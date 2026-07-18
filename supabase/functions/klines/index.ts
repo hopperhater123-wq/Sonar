@@ -6,7 +6,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BONKUSDT"];
+const SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BONKUSDT", "BCHUSDT"];
 
 // Bybit nutzt andere Intervall-Codes als Binance.
 const BYBIT_INTERVAL: Record<string, string> = {
