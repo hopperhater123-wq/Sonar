@@ -65,6 +65,34 @@ Die Function antwortet mit einer Summary:
 }
 ```
 
+## Betrieb (Scheduler & Secrets)
+
+**Scheduler:** läuft bereits im Projekt `drwueulymfgfvgslxgay` — pg_cron ruft
+`ingest` alle 30 Minuten auf (Migration `0003_schedule.sql`). Alle Quellen
+bleiben dabei bequem in ihren Gratis-Rate-Limits.
+
+```sql
+-- Läufe prüfen
+select * from cron.job_run_details
+where jobid = (select jobid from cron.job where jobname = 'sonar-ingest')
+order by start_time desc limit 10;
+```
+
+**Reddit aktivieren** (optional, füllt `social_posts`):
+1. App anlegen: https://www.reddit.com/prefs/apps → *create app* → Typ
+   `script`, beliebige `redirect uri` (z. B. `http://localhost:8080`).
+   `client_id` steht unter dem App-Namen, `secret` daneben.
+2. Secrets setzen (kein MCP-Tool dafür — Dashboard oder CLI):
+   ```bash
+   supabase secrets set \
+     REDDIT_CLIENT_ID=... REDDIT_CLIENT_SECRET=... \
+     REDDIT_USER_AGENT="SonarIngest/0.1 (privat; by u/DEINNAME)" \
+     --project-ref drwueulymfgfvgslxgay
+   ```
+   Dashboard: *Project → Edge Functions → Secrets*.
+3. Ab dem nächsten Lauf zieht Reddit automatisch mit; `reddit` verschwindet
+   aus `sourceErrors`.
+
 ## Ehrliche Hinweise
 
 - **`rss` und `dexscreener` sind best-effort.** Der erste echte Lauf zeigt die
