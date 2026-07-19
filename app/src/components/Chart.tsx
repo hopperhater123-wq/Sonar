@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { Interval, KlineRow, ProposalRow } from "../types";
 import { fmtPrice, timeAgo } from "../format";
 
@@ -35,7 +35,8 @@ function xLabel(iso: string, interval: Interval): string {
     : d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit" }) + "h";
 }
 
-export function Chart({
+// memo: die ~100 SVG-Kerzen sollen beim Hebel-Ziehen nicht neu gerendert werden.
+export const Chart = memo(function Chart({
   symbols,
   symbol,
   onSymbolChange,
@@ -170,4 +171,4 @@ export function Chart({
       {loading && rows.length === 0 ? <p className="muted">lädt…</p> : body}
     </section>
   );
-}
+});

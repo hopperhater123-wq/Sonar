@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { NewsRow, SentimentSourceRow } from "../types";
 import { analyzeText, extractTickers } from "../lib/lexicon";
 import { fmtNum, timeAgo, tone } from "../format";
@@ -7,7 +8,8 @@ import { fmtNum, timeAgo, tone } from "../format";
 // Lexikon sie einstuft — dieselbe Logik, die serverseitig ins Scoring fliesst.
 // Darunter: aktuelle Sentiment-Werte je Symbol (Lexikon vs. Claude).
 
-export function NewsFeed({
+// memo: fuehrt Lexikon-Analyse je Schlagzeile aus — nicht bei jedem Regler-Tick.
+export const NewsFeed = memo(function NewsFeed({
   news,
   universe,
   sentimentRows,
@@ -99,4 +101,4 @@ export function NewsFeed({
       </ul>
     </section>
   );
-}
+});

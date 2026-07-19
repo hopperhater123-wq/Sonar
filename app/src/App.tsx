@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { currentTheme, toggleTheme, type Theme } from "./theme";
@@ -162,6 +162,17 @@ export default function App() {
     localStorage.setItem("sonar-leverage", String(clamped));
   }, []);
 
+  // Stabile Callbacks — sonst re-rendern die memoisierten Kinder bei jedem
+  // Regler-Tick (INP-Jank). Funktionale Updates statt Closures ueber State.
+  const selectBlip = useCallback((i: number) => {
+    setScopeSel(i);
+    setScopeExpanded(i);
+  }, []);
+  const toggleCard = useCallback((i: number) => {
+    setScopeExpanded((prev) => (prev === i ? -1 : i));
+    setScopeSel(i);
+  }, []);
+
   const runBacktest = useCallback(
     async (proposalId: number, lev: number): Promise<BacktestResponse> => {
       if (DEMO) return demoBacktest(lev);
@@ -232,14 +243,20 @@ export default function App() {
   const fetchKlines = DEMO ? demoKlines : fetchKlinesDb;
 
   // Motion-Layer: Leaderboard (max. 8 Blips) + juengster Vorschlag je Symbol.
-  const contacts: Contact[] = (data?.leaderboard ?? []).slice(0, 8).map((r) => ({
-    symbol: r.asset_symbol,
-    strength: strengthPct(r.sonar_score),
-    score: r.sonar_score,
-    components: r.components_json,
-    hasVolume: r.components_json.has_volume !== false,
-    proposal: data?.proposals.find((p) => p.asset_symbol === r.asset_symbol) ?? null,
-  }));
+  // Memoisiert auf `data` — beim Hebel-Ziehen bleibt die Referenz stabil, damit
+  // der animierte Scope nicht neu aufgesetzt wird.
+  const contacts: Contact[] = useMemo(
+    () =>
+      (data?.leaderboard ?? []).slice(0, 8).map((r) => ({
+        symbol: r.asset_symbol,
+        strength: strengthPct(r.sonar_score),
+        score: r.sonar_score,
+        components: r.components_json,
+        hasVolume: r.components_json.has_volume !== false,
+        proposal: data?.proposals.find((p) => p.asset_symbol === r.asset_symbol) ?? null,
+      })),
+    [data],
+  );
 
   return (
     <div className="shell">
@@ -299,26 +316,17 @@ export default function App() {
           {contacts.length > 0 && (
             <MotionConfig reducedMotion="user">
               <div className="grid two scope-row">
-                <ScoreScope
-                  contacts={contacts}
-                  selected={scopeSel}
-                  onSelect={(i) => {
-                    setScopeSel(i);
-                    setScopeExpanded(i);
-                  }}
-                />
+                <ScoreScope contacts={contacts} selected={scopeSel} onSelect={selectBlip} />
                 <div>
                   {contacts.map((c, i) => (
                     <ContactCard
                       key={c.symbol}
+                      index={i}
                       contact={c}
                       expanded={scopeExpanded === i}
                       leverage={leverage}
                       runBacktest={runBacktest}
-                      onToggle={() => {
-                        setScopeExpanded(scopeExpanded === i ? -1 : i);
-                        setScopeSel(i);
-                      }}
+                      onToggle={toggleCard}
                     />
                   ))}
                 </div>

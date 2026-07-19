@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { heat } from "../lib/heat";
 import { liqPrice, maxViableLeverage, parseEntryMid, riskAtStopPct } from "../lib/leverage";
@@ -11,11 +11,12 @@ import { fmtNum, fmtPct, fmtPrice, timeAgo } from "../format";
 // Gegenargumente). Pionex-Pill wurde ersatzlos gestrichen (Vorgabe).
 
 interface Props {
+  index: number;
   contact: Contact;
   expanded: boolean;
   leverage: number;
   runBacktest: (proposalId: number, lev: number) => Promise<BacktestResponse>;
-  onToggle: () => void;
+  onToggle: (index: number) => void;
 }
 
 const reveal: Variants = {
@@ -204,14 +205,14 @@ function ProposalPanel({
   );
 }
 
-export function ContactCard({ contact: c, expanded, leverage, runBacktest, onToggle }: Props) {
+function ContactCardImpl({ index, contact: c, expanded, leverage, runBacktest, onToggle }: Props) {
   const col = heat(c.strength);
 
   return (
     <motion.div layout className="scope-card">
       <motion.button
         layout
-        onClick={onToggle}
+        onClick={() => onToggle(index)}
         whileTap={{ scale: 0.985 }}
         transition={{ type: "spring", stiffness: 600, damping: 20 }}
         className="scope-card-btn"
@@ -279,3 +280,16 @@ export function ContactCard({ contact: c, expanded, leverage, runBacktest, onTog
     </motion.div>
   );
 }
+
+// Kollabierte Karten haengen NICHT am Hebel — nur die aufgeklappte Karte
+// re-rendert, wenn sich leverage aendert. Das haelt den Regler fluessig (INP).
+export const ContactCard = memo(
+  ContactCardImpl,
+  (prev, next) =>
+    prev.index === next.index &&
+    prev.contact === next.contact &&
+    prev.expanded === next.expanded &&
+    prev.runBacktest === next.runBacktest &&
+    prev.onToggle === next.onToggle &&
+    (!next.expanded || prev.leverage === next.leverage),
+);

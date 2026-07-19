@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { heat } from "../lib/heat";
 import type { Contact } from "../types";
@@ -37,7 +37,9 @@ function geometry(contacts: Contact[]): Geo[] {
   });
 }
 
-export function ScoreScope({ contacts, selected, onSelect }: Props) {
+// memo: der animierte Scope (rAF + Framer-Blips) haengt nur an contacts/selected,
+// nicht am Hebel — sonst wuerde jeder Regler-Tick die Animation neu aufsetzen.
+export const ScoreScope = memo(function ScoreScope({ contacts, selected, onSelect }: Props) {
   const geo = useMemo(() => geometry(contacts), [contacts]);
   const sweepRef = useRef<HTMLDivElement>(null);
   const dotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -142,4 +144,4 @@ export function ScoreScope({ contacts, selected, onSelect }: Props) {
       </div>
     </div>
   );
-}
+});

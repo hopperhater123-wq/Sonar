@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { FearGreed, SentimentCoverage } from "../types";
 import { timeAgo } from "../format";
 import { FearGreedGauge } from "./FearGreedGauge";
@@ -19,7 +20,8 @@ function SentimentBadge({ s }: { s: SentimentCoverage | null }) {
   );
 }
 
-export function MarketBar({
+// memo: enthaelt die animierte F&G-Anzeige (Framer) — nicht am Hebel haengen.
+export const MarketBar = memo(function MarketBar({
   fearGreed,
   lastIngestAt,
   sentiment,
@@ -37,4 +39,4 @@ export function MarketBar({
       </div>
     </div>
   );
-}
+});
