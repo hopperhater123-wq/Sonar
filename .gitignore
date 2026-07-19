@@ -6,6 +6,7 @@
 # Node/Deno-Artefakte
 node_modules/
 dist/
+.vite/
 
 # Supabase CLI
 supabase/.branches/
