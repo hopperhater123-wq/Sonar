@@ -19,6 +19,9 @@ export function Proposals({ rows }: { rows: ProposalRow[] }) {
           <header>
             <strong>{p.asset_symbol}</strong>
             <span className={`badge ${p.status === "proposed" ? "" : "muted"}`}>{p.status}</span>
+            {p.origin === "claude" && (
+              <span className="badge" title={p.model ?? undefined}>🤖 Claude-Urteil</span>
+            )}
             <span className="muted small">{timeAgo(p.created_at)}</span>
           </header>
           <div className="proposal-nums">

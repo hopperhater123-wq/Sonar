@@ -41,6 +41,8 @@ export interface ProposalRow {
   counterpoints: string | null;
   sonar_score: number | null;
   status: string;
+  origin?: string | null;
+  model?: string | null;
   created_at: string;
 }
 
