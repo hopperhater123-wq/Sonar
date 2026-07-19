@@ -1,24 +1,52 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { currentTheme, toggleTheme, type Theme } from "./theme";
+import { DEMO_DATA, demoKlines } from "./demo";
 import type {
   DashboardData,
   FearGreed,
+  Interval,
+  KlineRow,
   LeaderboardRow,
+  NewsRow,
   PaperEquityRow,
   PaperStats,
   PaperTradeRow,
   ProposalRow,
   SentimentCoverage,
+  SentimentSourceRow,
 } from "./types";
 import { Login } from "./components/Login";
 import { MarketBar } from "./components/MarketBar";
+import { Briefing } from "./components/Briefing";
+import { Chart } from "./components/Chart";
+import { NewsFeed } from "./components/NewsFeed";
 import { Leaderboard } from "./components/Leaderboard";
 import { Proposals } from "./components/Proposals";
 import { Paper } from "./components/Paper";
 
+const DEMO = new URLSearchParams(window.location.search).has("demo");
+
+// Symbole mit Kurshistorie (fest in der klines-Function definiert).
+const KLINE_SYMBOLS = ["BTC", "ETH", "SOL", "XRP", "BONK", "BCH"];
+
+async function fetchKlinesDb(symbol: string, interval: Interval): Promise<KlineRow[]> {
+  const limit = interval === "1h" ? 96 : interval === "4h" ? 120 : 90;
+  const { data, error } = await supabase
+    .from("klines")
+    .select("open_time, open, high, low, close, volume")
+    .eq("symbol", symbol)
+    .eq("interval", interval)
+    .order("open_time", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as KlineRow[]).reverse();
+}
+
 async function loadData(): Promise<DashboardData> {
-  const [lb, props, stats, eq, trades, fg, lastSig, cov] = await Promise.all([
+  const since48h = new Date(Date.now() - 48 * 3_600_000).toISOString();
+  const [lb, props, stats, eq, trades, fg, lastSig, cov, news, sent, uni] = await Promise.all([
     supabase.from("sonar_leaderboard").select("*"),
     supabase.from("proposals").select("*").order("created_at", { ascending: false }).limit(12),
     supabase.from("paper_stats").select("*").maybeSingle(),
@@ -36,11 +64,24 @@ async function loadData(): Promise<DashboardData> {
       .select("scored, with_sentiment")
       .order("run_at", { ascending: false })
       .limit(48),
+    supabase
+      .from("news")
+      .select("title, url, source, published_at, captured_at")
+      .order("captured_at", { ascending: false })
+      .limit(25),
+    supabase
+      .from("signals")
+      .select("asset_symbol, source, sentiment_score, captured_at")
+      .in("source", ["sentiment_lexicon", "sentiment_llm"])
+      .gte("captured_at", since48h)
+      .order("captured_at", { ascending: false })
+      .limit(200),
+    supabase.from("symbol_features").select("symbol"),
   ]);
 
   const firstErr =
     lb.error ?? props.error ?? stats.error ?? eq.error ?? trades.error ?? fg.error ??
-    lastSig.error ?? cov.error;
+    lastSig.error ?? cov.error ?? news.error ?? sent.error ?? uni.error;
   if (firstErr) throw new Error(firstErr.message);
 
   const tradeRows = (trades.data ?? []) as PaperTradeRow[];
@@ -64,7 +105,7 @@ async function loadData(): Promise<DashboardData> {
 
   const fgRow = (fg.data as { value: number; classification: string | null; captured_at: string }[] | null)?.[0];
 
-  // Sentiment-Coverage: juengster Lauf + wie viele Laeufe in Folge ganz ohne Sentiment.
+  // Sentiment-Coverage: juengster Lauf + Laeufe in Folge ganz ohne Sentiment.
   const covRows = (cov.data ?? []) as { scored: number; with_sentiment: number }[];
   let sentiment: SentimentCoverage | null = null;
   if (covRows.length > 0) {
@@ -85,6 +126,9 @@ async function loadData(): Promise<DashboardData> {
     lastCloses,
     fearGreed: (fgRow ?? null) as FearGreed | null,
     sentiment,
+    news: (news.data ?? []) as NewsRow[],
+    sentimentRows: (sent.data ?? []) as SentimentSourceRow[],
+    universe: ((uni.data ?? []) as { symbol: string }[]).map((u) => u.symbol),
     lastIngestAt: (lastSig.data as { captured_at: string }[] | null)?.[0]?.captured_at ?? null,
     fetchedAt: new Date().toISOString(),
   };
@@ -92,12 +136,16 @@ async function loadData(): Promise<DashboardData> {
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [authReady, setAuthReady] = useState(DEMO);
+  const [data, setData] = useState<DashboardData | null>(DEMO ? DEMO_DATA : null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>(currentTheme());
+  const [chartSymbol, setChartSymbol] = useState("BTC");
+  const chartInitDone = useRef(false);
 
   useEffect(() => {
+    if (DEMO) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthReady(true);
@@ -107,6 +155,7 @@ export default function App() {
   }, []);
 
   const refresh = useCallback(() => {
+    if (DEMO) return;
     setLoading(true);
     setError(null);
     loadData()
@@ -116,6 +165,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (DEMO) return;
     if (!session) {
       setData(null);
       return;
@@ -125,14 +175,29 @@ export default function App() {
     return () => clearInterval(timer);
   }, [session, refresh]);
 
+  // Chart initial auf das Symbol des juengsten Vorschlags stellen (einmalig).
+  useEffect(() => {
+    if (chartInitDone.current || !data) return;
+    const top = data.proposals[0];
+    if (top && KLINE_SYMBOLS.includes(top.asset_symbol)) setChartSymbol(top.asset_symbol);
+    chartInitDone.current = true;
+  }, [data]);
+
   if (!authReady) return <div className="center-note">Lade…</div>;
-  if (!session) return <Login />;
+  if (!DEMO && !session) return <Login />;
+
+  const topProposal = data?.proposals[0] ?? null;
+  const fetchKlines = DEMO ? demoKlines : fetchKlinesDb;
 
   return (
     <div className="shell">
+      <div className="sonar-bg" aria-hidden="true" />
       <header className="topbar">
         <div className="brand">
-          🛰️ <strong>Sonar</strong> <span className="tag">Signal statt Auto-Execution</span>
+          <span className="ping-dot" aria-hidden="true" />
+          <strong>SONAR</strong>
+          <span className="tag">Signal statt Auto-Execution</span>
+          {DEMO && <span className="badge demo">DEMO-DATEN</span>}
         </div>
         <div className="topbar-right">
           {data && (
@@ -140,12 +205,23 @@ export default function App() {
               Stand {new Date(data.fetchedAt).toLocaleTimeString("de-DE")}
             </span>
           )}
-          <button onClick={refresh} disabled={loading}>
-            {loading ? "lädt…" : "Aktualisieren"}
+          <button
+            className="ghost icon"
+            title={theme === "dark" ? "Hellmodus" : "Dunkelmodus"}
+            onClick={() => setTheme(toggleTheme())}
+          >
+            {theme === "dark" ? "☀" : "☾"}
           </button>
-          <button className="ghost" onClick={() => supabase.auth.signOut()}>
-            Logout
-          </button>
+          {!DEMO && (
+            <>
+              <button onClick={refresh} disabled={loading}>
+                {loading ? "lädt…" : "Aktualisieren"}
+              </button>
+              <button className="ghost" onClick={() => supabase.auth.signOut()}>
+                Logout
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -158,17 +234,41 @@ export default function App() {
             lastIngestAt={data.lastIngestAt}
             sentiment={data.sentiment}
           />
-          <main className="grid">
-            <section className="card span2">
+          <Briefing
+            proposal={topProposal}
+            chartable={topProposal != null && KLINE_SYMBOLS.includes(topProposal.asset_symbol)}
+            onShowChart={() => {
+              if (topProposal) setChartSymbol(topProposal.asset_symbol);
+              document.getElementById("chart")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
+          <div className="grid two">
+            <Chart
+              symbols={KLINE_SYMBOLS}
+              symbol={chartSymbol}
+              onSymbolChange={setChartSymbol}
+              fetchKlines={fetchKlines}
+              proposals={data.proposals}
+            />
+            <NewsFeed news={data.news} universe={data.universe} sentimentRows={data.sentimentRows} />
+          </div>
+          <section className="card">
+            <div className="card-head">
               <h2>SonarScore-Leaderboard</h2>
-              <Leaderboard rows={data.leaderboard} />
-            </section>
+            </div>
+            <Leaderboard rows={data.leaderboard} />
+          </section>
+          <div className="grid two">
             <section className="card">
-              <h2>Strategie-Vorschläge</h2>
+              <div className="card-head">
+                <h2>Strategie-Vorschläge</h2>
+              </div>
               <Proposals rows={data.proposals} />
             </section>
             <section className="card">
-              <h2>Paper-Forward-Test</h2>
+              <div className="card-head">
+                <h2>Paper-Forward-Test</h2>
+              </div>
               <Paper
                 stats={data.paperStats}
                 equity={data.equity}
@@ -176,7 +276,7 @@ export default function App() {
                 lastCloses={data.lastCloses}
               />
             </section>
-          </main>
+          </div>
         </>
       )}
 

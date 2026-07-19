@@ -91,6 +91,32 @@ export interface SentimentCoverage {
   stillRuns: number; // Anzahl juengster Laeufe in Folge ganz ohne Sentiment
 }
 
+export interface NewsRow {
+  title: string;
+  url: string;
+  source: string;
+  published_at: string | null;
+  captured_at: string;
+}
+
+export interface KlineRow {
+  open_time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface SentimentSourceRow {
+  asset_symbol: string;
+  source: string; // sentiment_lexicon | sentiment_llm
+  sentiment_score: number;
+  captured_at: string;
+}
+
+export type Interval = "1h" | "4h" | "1d";
+
 export interface DashboardData {
   leaderboard: LeaderboardRow[];
   proposals: ProposalRow[];
@@ -100,6 +126,9 @@ export interface DashboardData {
   lastCloses: Record<string, number>;
   fearGreed: FearGreed | null;
   sentiment: SentimentCoverage | null;
+  news: NewsRow[];
+  sentimentRows: SentimentSourceRow[];
+  universe: string[]; // bekannte Symbole (fuer Ticker-Annotation im Feed)
   lastIngestAt: string | null;
   fetchedAt: string;
 }
