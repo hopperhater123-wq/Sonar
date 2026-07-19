@@ -168,7 +168,19 @@ export default function App() {
       const { data, error } = await supabase.functions.invoke("backtest", {
         body: { proposal_id: proposalId, leverage: lev },
       });
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        // supabase-js versteckt die echte Fehlermeldung im Response-Context —
+        // rausholen, statt generisch "non-2xx" anzuzeigen.
+        let msg = error.message;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          const parsed = ctx ? await ctx.json() : null;
+          if (parsed?.error) msg = String(parsed.error);
+        } catch {
+          // Original-Message behalten
+        }
+        return { ok: false, error: msg };
+      }
       return data as BacktestResponse;
     },
     [],

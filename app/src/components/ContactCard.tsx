@@ -111,6 +111,7 @@ function ProposalPanel({
   const entryMid = parseEntryMid(p.entry_zone);
   const maxLev = entryMid != null && p.stop_loss != null ? maxViableLeverage(entryMid, p.stop_loss) : null;
   const overLev = maxLev != null && leverage > maxLev;
+  const stale = Date.now() - new Date(p.created_at).getTime() > 24 * 3_600_000;
 
   const start = async () => {
     setBusy(true);
@@ -122,7 +123,14 @@ function ProposalPanel({
   return (
     <div className="scope-proposal">
       <div className="scope-proposal-head">
-        <span className="scope-title small-title">VORSCHLAG</span>
+        <span className="scope-title small-title">
+          VORSCHLAG
+          {stale && (
+            <span className="chip warn" title="Älter als 24 h — judge oder generate_proposals() erzeugt frische">
+              veraltet
+            </span>
+          )}
+        </span>
         <span className="scope-sub">
           {p.origin === "claude" ? `🤖 ${p.model ?? "Claude"}` : "Regelwerk"} · {timeAgo(p.created_at)}
         </span>

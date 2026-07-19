@@ -40,7 +40,14 @@ export function Briefing({
   return (
     <section className="card briefing">
       <div className="briefing-head">
-        <span className="label">Tagesbriefing · Systemvorschlag {timeAgo(p.created_at)}</span>
+        <span className="label">
+          Tagesbriefing · Systemvorschlag {timeAgo(p.created_at)}
+          {Date.now() - new Date(p.created_at).getTime() > 24 * 3_600_000 && (
+            <span className="chip warn" title="Älter als 24 h — judge oder generate_proposals() erzeugt frische">
+              veraltet
+            </span>
+          )}
+        </span>
         <span className="badge">{p.origin === "claude" ? `🤖 ${p.model ?? "Claude"}` : "Regelwerk"}</span>
       </div>
 

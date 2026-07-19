@@ -3,7 +3,8 @@
 export function fmtPrice(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "–";
   if (v >= 1000) return v.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-  if (v >= 1) return v.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+  if (v >= 10) return v.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+  // Kleine Preise brauchen mehr Stellen: XRP-Stop 1.0001 darf nicht als "1" erscheinen.
   if (v >= 0.01) return v.toLocaleString("de-DE", { maximumFractionDigits: 4 });
   return v.toExponential(2).replace(".", ",");
 }

@@ -6,7 +6,8 @@
 // testbar — als plpgsql wuerde er unlesbar. Die Engine (lib/sim.ts) bleibt pure.
 //
 // verify_jwt=true: Aufruf braucht ein JWT (Dashboard-Session oder anon-Key als
-// Bearer) — sonst koennte jede fremde Anfrage Junk-Zeilen in backtests erzeugen.
+// Bearer). CORS-Header sind Pflicht, weil der Browser (Dashboard) direkt
+// aufruft — ohne OPTIONS-Antwort blockt der Preflight jede Anfrage.
 //
 // Aufruf:  POST /functions/v1/backtest  Body: { proposal_id, leverage?, interval? }
 //
@@ -18,6 +19,14 @@ import { type Candle, liquidationPrice, maxViableLeverage, simulate, splitCandle
 const LIQ_BUFFER = 0.95;
 const DEFAULT_FEE_PCT = 0.05;
 const HINT = "⚠️ Backtest ≠ Vorhersage: zeigt nur, wie sich die Mechanik in der Vergangenheit verhalten haette.";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const json = (data: unknown, status = 200) => Response.json(data, { status, headers: CORS });
 
 interface ProposalRow {
   id: number;
@@ -37,6 +46,10 @@ function parseEntryZone(zone: string | null, fallback: number): { low: number; h
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS });
+  }
+
   let body: Record<string, unknown> = {};
   try {
     body = await req.json();
@@ -49,7 +62,7 @@ Deno.serve(async (req) => {
   const feePct = Number(body.fee_pct) || DEFAULT_FEE_PCT;
 
   if (!Number.isFinite(proposalId)) {
-    return Response.json({ ok: false, error: "proposal_id fehlt" }, { status: 400 });
+    return json({ ok: false, error: "proposal_id fehlt" }, 400);
   }
 
   const db = createClient(
@@ -63,10 +76,10 @@ Deno.serve(async (req) => {
     .select("id, asset_symbol, entry_zone, stop_loss, take_profit")
     .eq("id", proposalId)
     .maybeSingle<ProposalRow>();
-  if (propErr) return Response.json({ ok: false, error: propErr.message }, { status: 500 });
-  if (!prop) return Response.json({ ok: false, error: `Proposal ${proposalId} nicht gefunden` }, { status: 404 });
+  if (propErr) return json({ ok: false, error: propErr.message }, 500);
+  if (!prop) return json({ ok: false, error: `Proposal ${proposalId} nicht gefunden` }, 404);
   if (prop.stop_loss == null || prop.take_profit == null) {
-    return Response.json({ ok: false, error: "Proposal hat keinen Stop/TP" }, { status: 422 });
+    return json({ ok: false, error: "Proposal hat keinen Stop/TP" }, 422);
   }
 
   const { data: rows, error: klErr } = await db
@@ -76,7 +89,7 @@ Deno.serve(async (req) => {
     .eq("interval", interval)
     .order("open_time", { ascending: true })
     .limit(1000);
-  if (klErr) return Response.json({ ok: false, error: klErr.message }, { status: 500 });
+  if (klErr) return json({ ok: false, error: klErr.message }, 500);
 
   const candles: Candle[] = (rows ?? []).map((k) => ({
     t: new Date(k.open_time as string).getTime(),
@@ -86,10 +99,10 @@ Deno.serve(async (req) => {
     c: k.close as number,
   }));
   if (candles.length < 40) {
-    return Response.json({
+    return json({
       ok: false,
-      error: `Nur ${candles.length} ${interval}-Kerzen fuer ${prop.asset_symbol} — zu wenig. Chart-Symbole (BTC/ETH/SOL/XRP/BONK/BCH) haben Historie.`,
-    }, { status: 422 });
+      error: `Nur ${candles.length} ${interval}-Kerzen fuer ${prop.asset_symbol} — zu wenig. Kurshistorie gibt es fuer BTC/ETH/SOL/XRP/BONK/BCH.`,
+    }, 422);
   }
 
   const fallbackEntry = candles[candles.length - 1].c;
@@ -126,7 +139,7 @@ Deno.serve(async (req) => {
     result: { train: trainResult, test: testResult, max_viable_leverage: maxLev },
   });
 
-  return Response.json({
+  return json({
     ok: insErr == null,
     symbol: prop.asset_symbol,
     interval,
@@ -138,5 +151,5 @@ Deno.serve(async (req) => {
     test: testResult,
     hint: HINT,
     dbError: insErr?.message ?? null,
-  }, { status: insErr == null ? 200 : 500 });
+  }, insErr == null ? 200 : 500);
 });
