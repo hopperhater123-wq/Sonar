@@ -95,6 +95,7 @@ td.score { font-weight: 700; }
   background: #fff; border-radius: 2px; transform: translateX(-50%);
 }
 .fg-value { font-weight: 700; }
+.market-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .proposal-list { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; }
 .proposal { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }

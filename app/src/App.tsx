@@ -9,6 +9,7 @@ import type {
   PaperStats,
   PaperTradeRow,
   ProposalRow,
+  SentimentCoverage,
 } from "./types";
 import { Login } from "./components/Login";
 import { MarketBar } from "./components/MarketBar";
@@ -17,7 +18,7 @@ import { Proposals } from "./components/Proposals";
 import { Paper } from "./components/Paper";
 
 async function loadData(): Promise<DashboardData> {
-  const [lb, props, stats, eq, trades, fg, lastSig] = await Promise.all([
+  const [lb, props, stats, eq, trades, fg, lastSig, cov] = await Promise.all([
     supabase.from("sonar_leaderboard").select("*"),
     supabase.from("proposals").select("*").order("created_at", { ascending: false }).limit(12),
     supabase.from("paper_stats").select("*").maybeSingle(),
@@ -30,10 +31,16 @@ async function loadData(): Promise<DashboardData> {
       .order("captured_at", { ascending: false })
       .limit(1),
     supabase.from("signals").select("captured_at").order("captured_at", { ascending: false }).limit(1),
+    supabase
+      .from("sentiment_coverage")
+      .select("scored, with_sentiment")
+      .order("run_at", { ascending: false })
+      .limit(48),
   ]);
 
   const firstErr =
-    lb.error ?? props.error ?? stats.error ?? eq.error ?? trades.error ?? fg.error ?? lastSig.error;
+    lb.error ?? props.error ?? stats.error ?? eq.error ?? trades.error ?? fg.error ??
+    lastSig.error ?? cov.error;
   if (firstErr) throw new Error(firstErr.message);
 
   const tradeRows = (trades.data ?? []) as PaperTradeRow[];
@@ -57,6 +64,18 @@ async function loadData(): Promise<DashboardData> {
 
   const fgRow = (fg.data as { value: number; classification: string | null; captured_at: string }[] | null)?.[0];
 
+  // Sentiment-Coverage: juengster Lauf + wie viele Laeufe in Folge ganz ohne Sentiment.
+  const covRows = (cov.data ?? []) as { scored: number; with_sentiment: number }[];
+  let sentiment: SentimentCoverage | null = null;
+  if (covRows.length > 0) {
+    let stillRuns = 0;
+    for (const r of covRows) {
+      if (r.with_sentiment === 0) stillRuns++;
+      else break;
+    }
+    sentiment = { withSentiment: covRows[0].with_sentiment, scored: covRows[0].scored, stillRuns };
+  }
+
   return {
     leaderboard: (lb.data ?? []) as LeaderboardRow[],
     proposals: (props.data ?? []) as ProposalRow[],
@@ -65,6 +84,7 @@ async function loadData(): Promise<DashboardData> {
     trades: tradeRows,
     lastCloses,
     fearGreed: (fgRow ?? null) as FearGreed | null,
+    sentiment,
     lastIngestAt: (lastSig.data as { captured_at: string }[] | null)?.[0]?.captured_at ?? null,
     fetchedAt: new Date().toISOString(),
   };
@@ -133,7 +153,11 @@ export default function App() {
 
       {data && (
         <>
-          <MarketBar fearGreed={data.fearGreed} lastIngestAt={data.lastIngestAt} />
+          <MarketBar
+            fearGreed={data.fearGreed}
+            lastIngestAt={data.lastIngestAt}
+            sentiment={data.sentiment}
+          />
           <main className="grid">
             <section className="card span2">
               <h2>SonarScore-Leaderboard</h2>

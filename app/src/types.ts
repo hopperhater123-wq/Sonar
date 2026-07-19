@@ -85,6 +85,12 @@ export interface FearGreed {
   captured_at: string;
 }
 
+export interface SentimentCoverage {
+  withSentiment: number; // Symbole mit sp != 0 im juengsten Lauf
+  scored: number; // insgesamt gescorte Symbole im juengsten Lauf
+  stillRuns: number; // Anzahl juengster Laeufe in Folge ganz ohne Sentiment
+}
+
 export interface DashboardData {
   leaderboard: LeaderboardRow[];
   proposals: ProposalRow[];
@@ -93,6 +99,7 @@ export interface DashboardData {
   trades: PaperTradeRow[];
   lastCloses: Record<string, number>;
   fearGreed: FearGreed | null;
+  sentiment: SentimentCoverage | null;
   lastIngestAt: string | null;
   fetchedAt: string;
 }
