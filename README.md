@@ -100,6 +100,9 @@ order by start_time desc limit 10;
 - **`reddit` braucht App-Credentials.** Fehlen sie, erscheint `reddit` in
   `sourceErrors`, alle anderen Quellen laufen normal.
 - **Keine Secrets im Frontend / im Repo.** Alles serverseitig (Spec §3).
+- **Security-Hardening (`0010`):** Views mit `security_invoker`, Read-Policies
+  für `authenticated` (Dashboard-Vorarbeit), `search_path` der SQL-Funktionen
+  gepinnt. pg_net bleibt bewusst in `public` (Umzug riskiert aktive Crons).
 
 ## Schicht 2 — SonarScore v1 (gebaut)
 
