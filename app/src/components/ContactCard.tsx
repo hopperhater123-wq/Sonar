@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { heat } from "../lib/heat";
-import type { Contact } from "../types";
-import { fmtNum, fmtPrice, timeAgo } from "../format";
+import { liqPrice, maxViableLeverage, parseEntryMid, riskAtStopPct } from "../lib/leverage";
+import type { BacktestResponse, Contact, SimOutcome } from "../types";
+import { fmtNum, fmtPct, fmtPrice, timeAgo } from "../format";
 
 // Signal-Karte (Motion-Layer aus der Chat-Session, portiert):
 // Spring-Press, Expand mit gestaggertem Blur-In. Statt des alten Grid-Panels
@@ -12,6 +13,8 @@ import { fmtNum, fmtPrice, timeAgo } from "../format";
 interface Props {
   contact: Contact;
   expanded: boolean;
+  leverage: number;
+  runBacktest: (proposalId: number, lev: number) => Promise<BacktestResponse>;
   onToggle: () => void;
 }
 
@@ -60,7 +63,42 @@ function CompBar({
   );
 }
 
-function ProposalPanel({ c }: { c: Contact }) {
+function SimBlock({ label, s }: { label: string; s: SimOutcome }) {
+  return (
+    <div className="bt-block">
+      <div className="bt-block-head">
+        <span className="label">{label}</span>
+        <span className="muted small">{s.candles} Kerzen</span>
+      </div>
+      <div className="bt-nums">
+        <span className={s.pnlPct >= 0 ? "pos" : "neg"}>PnL {fmtPct(s.pnlPct)}</span>
+        <span className="muted">B&amp;H {fmtPct(s.buyHoldPct)}</span>
+        <span>
+          Treffer {s.hitRatePct == null ? "–" : `${fmtNum(s.hitRatePct, 0)} %`} ({s.trades} Trades)
+        </span>
+        <span className="neg">DD {fmtNum(s.maxDrawdownPct, 1)} %</span>
+        {s.liquidations > 0 && <span className="neg">☠ {s.liquidations}x liquidiert</span>}
+      </div>
+      {s.warnings.map((w) => (
+        <div key={w} className="small neg" style={{ marginTop: 3 }}>
+          ⚠ {w}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProposalPanel({
+  c,
+  leverage,
+  runBacktest,
+}: {
+  c: Contact;
+  leverage: number;
+  runBacktest: (proposalId: number, lev: number) => Promise<BacktestResponse>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [bt, setBt] = useState<BacktestResponse | null>(null);
   const p = c.proposal;
   if (!p) {
     return (
@@ -70,6 +108,17 @@ function ProposalPanel({ c }: { c: Contact }) {
       </div>
     );
   }
+  const entryMid = parseEntryMid(p.entry_zone);
+  const maxLev = entryMid != null && p.stop_loss != null ? maxViableLeverage(entryMid, p.stop_loss) : null;
+  const overLev = maxLev != null && leverage > maxLev;
+
+  const start = async () => {
+    setBusy(true);
+    setBt(null);
+    setBt(await runBacktest(p.id, leverage));
+    setBusy(false);
+  };
+
   return (
     <div className="scope-proposal">
       <div className="scope-proposal-head">
@@ -112,6 +161,34 @@ function ProposalPanel({ c }: { c: Contact }) {
           <span className="label neg">Gegenargumente</span> {p.counterpoints}
         </p>
       )}
+
+      {entryMid != null && p.stop_loss != null && (
+        <p className={`small ${overLev ? "neg" : "muted"}`} style={{ marginTop: 8 }}>
+          Hebel {leverage}x: Liq {leverage > 1 ? `≈ ${fmtPrice(liqPrice(entryMid, leverage))}` : "—"} ·
+          Risiko am Stop ≈ {fmtNum(riskAtStopPct(entryMid, p.stop_loss, leverage), 0)} % · max.
+          sinnvoll ~{maxLev}x{overLev ? " — Stop greift bei diesem Hebel NIE" : ""}
+        </p>
+      )}
+
+      <div className="bt-row">
+        <button className="ghost" onClick={start} disabled={busy}>
+          {busy ? "simuliert…" : `Backtest mit ${leverage}x`}
+        </button>
+        <span className="muted small">Train/Test-Split auf 1h-Kerzen</span>
+      </div>
+
+      {bt && !bt.ok && <div className="error-box" style={{ marginTop: 8 }}>{bt.error}</div>}
+      {bt?.ok && bt.train && bt.test && (
+        <div className="bt-result">
+          <SimBlock label={`Test (ungesehen · die ehrliche Zahl)`} s={bt.test} />
+          <SimBlock label="Train (zur Einordnung)" s={bt.train} />
+          <p className="small muted" style={{ margin: "6px 0 0" }}>
+            {bt.hint} · Liq ≈ {fmtPrice(bt.liquidation_price)} · max. sinnvoller Hebel ~
+            {bt.max_viable_leverage}x
+          </p>
+        </div>
+      )}
+
       <p className="small muted" style={{ marginTop: 6 }}>
         Nur Vorschlag, kein Finanzrat — du entscheidest manuell.
       </p>
@@ -119,7 +196,7 @@ function ProposalPanel({ c }: { c: Contact }) {
   );
 }
 
-export function ContactCard({ contact: c, expanded, onToggle }: Props) {
+export function ContactCard({ contact: c, expanded, leverage, runBacktest, onToggle }: Props) {
   const col = heat(c.strength);
 
   return (
@@ -185,7 +262,7 @@ export function ContactCard({ contact: c, expanded, onToggle }: Props) {
                 )}
               </div>
               <motion.div variants={reveal}>
-                <ProposalPanel c={c} />
+                <ProposalPanel c={c} leverage={leverage} runBacktest={runBacktest} />
               </motion.div>
             </motion.div>
           </motion.section>

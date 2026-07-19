@@ -289,6 +289,20 @@ td.score { font-weight: 700; }
 .conf { height: 5px; width: 92px; background: var(--line); border-radius: 999px; margin-top: 5px; }
 .conf-fill { height: 100%; background: var(--accent); border-radius: 999px; }
 
+/* ── Hebel + Backtest ──────────────────────────────────────────────────── */
+.lever-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.lever-row input[type="range"] { flex: 0 1 220px; accent-color: var(--accent); }
+.lever-value { font-weight: 700; font-size: 15px; min-width: 44px; }
+.lever-info { flex: 1 1 auto; }
+.bt-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.bt-result { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.bt-block { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+.bt-block-head { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.bt-nums {
+  display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px;
+  font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums;
+}
+
 /* ── Chart ─────────────────────────────────────────────────────────────── */
 .chart-card .card-head { justify-content: flex-start; }
 .chart-svg { width: 100%; height: auto; display: block; }

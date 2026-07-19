@@ -1,15 +1,22 @@
 import type { ProposalRow } from "../types";
 import { fmtNum, fmtPrice, timeAgo } from "../format";
+import { liqPrice, maxViableLeverage, parseEntryMid, riskAtStopPct } from "../lib/leverage";
 
 // Tagesbriefing: der juengste Systemvorschlag als Hero — mit Gegenargumenten
 // IMMER sichtbar (Spec: ehrliches Abwaegen, kein Verkaufsprospekt).
+// Der Hebel-Regler gilt global (localStorage) — er verschiebt NICHT die Level,
+// sondern Risiko + Liquidationspreis, und das Briefing zeigt beides ehrlich an.
 export function Briefing({
   proposal,
   chartable,
+  leverage,
+  onLeverageChange,
   onShowChart,
 }: {
   proposal: ProposalRow | null;
   chartable: boolean;
+  leverage: number;
+  onLeverageChange: (v: number) => void;
   onShowChart: () => void;
 }) {
   if (!proposal) {
@@ -26,6 +33,10 @@ export function Briefing({
     );
   }
   const p = proposal;
+  const entryMid = parseEntryMid(p.entry_zone);
+  const canRisk = entryMid != null && p.stop_loss != null;
+  const maxLev = canRisk ? maxViableLeverage(entryMid, p.stop_loss!) : null;
+  const overLev = maxLev != null && leverage > maxLev;
   return (
     <section className="card briefing">
       <div className="briefing-head">
@@ -66,6 +77,33 @@ export function Briefing({
           </div>
         </div>
       </div>
+
+      <div className="lever-row">
+        <span className="label">Hebel</span>
+        <input
+          type="range"
+          min={1}
+          max={100}
+          step={1}
+          value={leverage}
+          onChange={(e) => onLeverageChange(Number(e.target.value))}
+          aria-label="Hebel 1 bis 100x"
+        />
+        <span className={`lever-value num ${overLev ? "neg" : ""}`}>{leverage}x</span>
+        {canRisk && (
+          <span className="muted small lever-info">
+            Liq {leverage > 1 ? `≈ ${fmtPrice(liqPrice(entryMid!, leverage))}` : "—"} · Risiko am
+            Stop ≈ {fmtNum(riskAtStopPct(entryMid!, p.stop_loss!, leverage), 0)} % des Einsatzes ·
+            max. sinnvoll ~{maxLev}x
+          </span>
+        )}
+      </div>
+      {overLev && (
+        <p className="small neg" style={{ margin: "4px 0 0" }}>
+          ⚠ Bei {leverage}x liegt die Liquidation VOR dem Stop — der Stop greift nie. Über ~{maxLev}x
+          ist dieses Setup kaputt.
+        </p>
+      )}
 
       {p.rationale && <p className="briefing-why">{p.rationale}</p>}
       {p.counterpoints && (

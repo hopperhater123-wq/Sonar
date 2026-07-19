@@ -2,7 +2,7 @@
 // FIKTIVEN, deterministischen Daten — ohne Login, ohne echte DB-Zugriffe.
 // Zweck: UI entwickeln/reviewen (Screenshots), ohne Datenfreigabe.
 
-import type { DashboardData, Interval, KlineRow, ProposalRow } from "./types";
+import type { BacktestResponse, DashboardData, Interval, KlineRow, ProposalRow } from "./types";
 
 // Kleiner deterministischer Zufall (LCG) — gleiche Charts bei jedem Render.
 function rng(seed: number) {
@@ -43,6 +43,35 @@ export function demoKlines(symbol: string, interval: Interval): Promise<KlineRow
 
 const now = Date.now();
 const iso = (minAgo: number) => new Date(now - minAgo * 60_000).toISOString();
+
+// Kanonische Demo-Antwort des Backtests (Werte an einen echten Lauf angelehnt).
+export function demoBacktest(lev: number): Promise<BacktestResponse> {
+  const over = lev > 22;
+  const liqWarn = `Bei ${lev}x liegt die Liquidation VOR dem Stop-Loss — der Stop greift nie. Max. sinnvoller Hebel fuer dieses Setup: ~22x.`;
+  const openWarn = "Position am Ende noch offen — zum letzten Schlusskurs bewertet.";
+  return Promise.resolve({
+    ok: true,
+    symbol: "ETH",
+    interval: "1h",
+    leverage: lev,
+    liquidation_price: Number((1867 * (1 - 0.95 / lev)).toFixed(2)),
+    max_viable_leverage: 22,
+    train: {
+      candles: 70, trades: over ? 1 : 0, wins: 0, losses: over ? 1 : 0,
+      liquidations: over ? 1 : 0, openAtEnd: true, hitRatePct: over ? 0 : null,
+      pnlPct: over ? -100 : -1.5 * lev, buyHoldPct: -1.52,
+      maxDrawdownPct: over ? 100 : Math.min(100, 5.8 * lev),
+      warnings: over ? [liqWarn, openWarn] : [openWarn],
+    },
+    test: {
+      candles: 48, trades: 0, wins: 0, losses: 0, liquidations: 0,
+      openAtEnd: true, hitRatePct: null, pnlPct: Number((0.37 * lev).toFixed(2)),
+      buyHoldPct: 0.81, maxDrawdownPct: Math.min(100, Number((0.68 * lev).toFixed(2))),
+      warnings: over ? [liqWarn, openWarn] : [openWarn],
+    },
+    hint: "⚠️ Backtest ≠ Vorhersage: zeigt nur, wie sich die Mechanik in der Vergangenheit verhalten haette.",
+  });
+}
 
 const demoProposals: ProposalRow[] = [
   {

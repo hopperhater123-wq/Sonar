@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { currentTheme, toggleTheme, type Theme } from "./theme";
-import { DEMO_DATA, demoKlines } from "./demo";
+import { DEMO_DATA, demoBacktest, demoKlines } from "./demo";
 import { MotionConfig } from "framer-motion";
 import { strengthPct } from "./lib/heat";
 import type {
+  BacktestResponse,
   Contact,
   DashboardData,
   FearGreed,
@@ -149,7 +150,29 @@ export default function App() {
   const [chartSymbol, setChartSymbol] = useState("BTC");
   const [scopeSel, setScopeSel] = useState(0);
   const [scopeExpanded, setScopeExpanded] = useState(0);
+  const [leverage, setLeverage] = useState(() => {
+    const v = Number(localStorage.getItem("sonar-leverage"));
+    return Number.isFinite(v) && v >= 1 && v <= 100 ? v : 1;
+  });
   const chartInitDone = useRef(false);
+
+  const changeLeverage = useCallback((v: number) => {
+    const clamped = Math.max(1, Math.min(100, Math.round(v)));
+    setLeverage(clamped);
+    localStorage.setItem("sonar-leverage", String(clamped));
+  }, []);
+
+  const runBacktest = useCallback(
+    async (proposalId: number, lev: number): Promise<BacktestResponse> => {
+      if (DEMO) return demoBacktest(lev);
+      const { data, error } = await supabase.functions.invoke("backtest", {
+        body: { proposal_id: proposalId, leverage: lev },
+      });
+      if (error) return { ok: false, error: error.message };
+      return data as BacktestResponse;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (DEMO) return;
@@ -254,6 +277,8 @@ export default function App() {
           <Briefing
             proposal={topProposal}
             chartable={topProposal != null && KLINE_SYMBOLS.includes(topProposal.asset_symbol)}
+            leverage={leverage}
+            onLeverageChange={changeLeverage}
             onShowChart={() => {
               if (topProposal) setChartSymbol(topProposal.asset_symbol);
               document.getElementById("chart")?.scrollIntoView({ behavior: "smooth" });
@@ -276,6 +301,8 @@ export default function App() {
                       key={c.symbol}
                       contact={c}
                       expanded={scopeExpanded === i}
+                      leverage={leverage}
+                      runBacktest={runBacktest}
                       onToggle={() => {
                         setScopeExpanded(scopeExpanded === i ? -1 : i);
                         setScopeSel(i);

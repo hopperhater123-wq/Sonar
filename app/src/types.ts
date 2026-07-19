@@ -117,6 +117,34 @@ export interface SentimentSourceRow {
 
 export type Interval = "1h" | "4h" | "1d";
 
+// Backtest-Antwort der Edge Function (Spec §13, Train/Test-Split).
+export interface SimOutcome {
+  candles: number;
+  trades: number;
+  wins: number;
+  losses: number;
+  liquidations: number;
+  openAtEnd: boolean;
+  hitRatePct: number | null;
+  pnlPct: number;
+  buyHoldPct: number;
+  maxDrawdownPct: number;
+  warnings: string[];
+}
+
+export interface BacktestResponse {
+  ok: boolean;
+  symbol?: string;
+  interval?: string;
+  leverage?: number;
+  liquidation_price?: number;
+  max_viable_leverage?: number;
+  train?: SimOutcome;
+  test?: SimOutcome;
+  hint?: string;
+  error?: string;
+}
+
 // View-Model fuer den Motion-Layer (ScoreScope + ContactCard):
 // ein Leaderboard-Eintrag plus sein juengster Vorschlag.
 export interface Contact {
