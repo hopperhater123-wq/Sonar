@@ -1,5 +1,6 @@
 import type { FearGreed, SentimentCoverage } from "../types";
 import { timeAgo } from "../format";
+import { FearGreedGauge } from "./FearGreedGauge";
 
 function SentimentBadge({ s }: { s: SentimentCoverage | null }) {
   if (!s) return null;
@@ -18,7 +19,6 @@ function SentimentBadge({ s }: { s: SentimentCoverage | null }) {
   );
 }
 
-// Fear & Greed wirkt im Score contrarian: Extreme Fear boostet, Extreme Greed dämpft.
 export function MarketBar({
   fearGreed,
   lastIngestAt,
@@ -28,24 +28,9 @@ export function MarketBar({
   lastIngestAt: string | null;
   sentiment: SentimentCoverage | null;
 }) {
-  const v = fearGreed?.value ?? null;
   return (
     <div className="marketbar card">
-      <div className="fg">
-        <span className="label">Fear &amp; Greed</span>
-        {v == null ? (
-          <span className="muted">keine Daten</span>
-        ) : (
-          <>
-            <div className="fg-bar" title={`${v}/100 — ${fearGreed?.classification ?? ""}`}>
-              <div className="fg-marker" style={{ left: `${v}%` }} />
-            </div>
-            <span className="fg-value">
-              {v} <span className="muted">· {fearGreed?.classification ?? "?"}</span>
-            </span>
-          </>
-        )}
-      </div>
+      <FearGreedGauge value={fearGreed?.value ?? null} />
       <div className="market-right">
         <SentimentBadge s={sentiment} />
         <span className="muted small">Letzter Ingest: {timeAgo(lastIngestAt)}</span>

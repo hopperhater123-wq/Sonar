@@ -177,6 +177,73 @@ td.score { font-weight: 700; }
 .seg button:hover { color: var(--text); transform: none; }
 .seg button.seg-on { background: var(--accent); color: var(--bg); }
 
+/* ── Motion-Layer: Signal Scope + Karten ───────────────────────────────── */
+.scope-row { margin-bottom: 16px; }
+.scope-shell {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 16px 18px; box-shadow: var(--shadow);
+}
+.scope-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.scope-title { font-weight: 700; font-size: 12px; letter-spacing: 0.16em; color: var(--accent); }
+.scope-title.small-title { font-size: 10.5px; }
+.scope-sub { font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+.scope-dish {
+  position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%;
+  overflow: hidden; border: 1px solid rgba(56, 225, 208, 0.18);
+  background: radial-gradient(circle at 50% 50%, #0a1826 0%, #070e17 72%);
+}
+.scope-label {
+  position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%);
+  font-size: 9px; letter-spacing: 0.1em; white-space: nowrap;
+  font-family: "JetBrains Mono", monospace; color: #7c93a0;
+}
+.scope-label.on { color: #e6f0f2; }
+
+.scope-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 13px;
+  overflow: hidden; margin-bottom: 11px; box-shadow: var(--shadow);
+}
+.scope-card-btn {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center;
+  width: 100%; padding: 14px 16px; background: transparent; border: none;
+  cursor: pointer; text-align: left; color: inherit; border-radius: 0;
+}
+.scope-card-btn:hover { transform: none; filter: none; background: var(--accent-dim); }
+.scope-card-sym { font-weight: 800; font-size: 19px; min-width: 74px; color: var(--text); }
+.scope-card-sym small {
+  display: block; font-family: "JetBrains Mono", monospace; font-weight: 400;
+  font-size: 9px; letter-spacing: 0.14em; color: var(--muted); margin-top: 2px;
+}
+.scope-strength { margin-top: 9px; height: 4px; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
+.scope-card-score {
+  font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 24px;
+  line-height: 1; text-align: right; min-width: 76px;
+}
+.scope-card-score small {
+  display: block; font-weight: 400; font-size: 8px; letter-spacing: 0.2em;
+  color: var(--muted); margin-top: 4px;
+}
+.scope-pill {
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted);
+}
+.scope-pill.ok { color: var(--pos); border-color: color-mix(in srgb, var(--pos) 40%, transparent); }
+.scope-pill.flag { color: var(--neg); border-color: color-mix(in srgb, var(--neg) 45%, transparent); }
+.scope-detail { padding: 2px 16px 16px; border-top: 1px solid var(--line-soft); }
+.scope-comps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin: 14px 0 6px; }
+.compbar-head { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); margin-bottom: 5px; }
+.compbar-head b { color: var(--text); font-family: "JetBrains Mono", monospace; }
+.compbar-track { height: 5px; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
+.compbar-fill { height: 100%; border-radius: 3px; }
+.scope-proposal {
+  margin-top: 14px; background: var(--accent-dim); border: 1px solid var(--line);
+  border-radius: 11px; padding: 13px 14px;
+}
+.scope-proposal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.scope-cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.scope-cell { display: flex; flex-direction: column; gap: 3px; }
+.scope-cell strong { font-family: "JetBrains Mono", monospace; font-size: 14px; }
+
 /* ── Marktleiste ───────────────────────────────────────────────────────── */
 .marketbar {
   display: flex; align-items: center; justify-content: space-between;

@@ -117,6 +117,17 @@ export interface SentimentSourceRow {
 
 export type Interval = "1h" | "4h" | "1d";
 
+// View-Model fuer den Motion-Layer (ScoreScope + ContactCard):
+// ein Leaderboard-Eintrag plus sein juengster Vorschlag.
+export interface Contact {
+  symbol: string;
+  strength: number; // 0..100, normiert fuer Scope-Geometrie und Heat-Farbe
+  score: number; // roher sonar_score
+  components: ComponentsJson;
+  hasVolume: boolean;
+  proposal: ProposalRow | null;
+}
+
 export interface DashboardData {
   leaderboard: LeaderboardRow[];
   proposals: ProposalRow[];

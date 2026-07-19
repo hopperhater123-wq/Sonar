@@ -3,7 +3,10 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { currentTheme, toggleTheme, type Theme } from "./theme";
 import { DEMO_DATA, demoKlines } from "./demo";
+import { MotionConfig } from "framer-motion";
+import { strengthPct } from "./lib/heat";
 import type {
+  Contact,
   DashboardData,
   FearGreed,
   Interval,
@@ -17,6 +20,8 @@ import type {
   SentimentCoverage,
   SentimentSourceRow,
 } from "./types";
+import { ScoreScope } from "./components/ScoreScope";
+import { ContactCard } from "./components/ContactCard";
 import { Login } from "./components/Login";
 import { MarketBar } from "./components/MarketBar";
 import { Briefing } from "./components/Briefing";
@@ -142,6 +147,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(currentTheme());
   const [chartSymbol, setChartSymbol] = useState("BTC");
+  const [scopeSel, setScopeSel] = useState(0);
+  const [scopeExpanded, setScopeExpanded] = useState(0);
   const chartInitDone = useRef(false);
 
   useEffect(() => {
@@ -188,6 +195,16 @@ export default function App() {
 
   const topProposal = data?.proposals[0] ?? null;
   const fetchKlines = DEMO ? demoKlines : fetchKlinesDb;
+
+  // Motion-Layer: Leaderboard (max. 8 Blips) + juengster Vorschlag je Symbol.
+  const contacts: Contact[] = (data?.leaderboard ?? []).slice(0, 8).map((r) => ({
+    symbol: r.asset_symbol,
+    strength: strengthPct(r.sonar_score),
+    score: r.sonar_score,
+    components: r.components_json,
+    hasVolume: r.components_json.has_volume !== false,
+    proposal: data?.proposals.find((p) => p.asset_symbol === r.asset_symbol) ?? null,
+  }));
 
   return (
     <div className="shell">
@@ -242,6 +259,33 @@ export default function App() {
               document.getElementById("chart")?.scrollIntoView({ behavior: "smooth" });
             }}
           />
+          {contacts.length > 0 && (
+            <MotionConfig reducedMotion="user">
+              <div className="grid two scope-row">
+                <ScoreScope
+                  contacts={contacts}
+                  selected={scopeSel}
+                  onSelect={(i) => {
+                    setScopeSel(i);
+                    setScopeExpanded(i);
+                  }}
+                />
+                <div>
+                  {contacts.map((c, i) => (
+                    <ContactCard
+                      key={c.symbol}
+                      contact={c}
+                      expanded={scopeExpanded === i}
+                      onToggle={() => {
+                        setScopeExpanded(scopeExpanded === i ? -1 : i);
+                        setScopeSel(i);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </MotionConfig>
+          )}
           <div className="grid two">
             <Chart
               symbols={KLINE_SYMBOLS}
