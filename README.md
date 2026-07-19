@@ -124,14 +124,34 @@ Fear & Greed wirkt contrarian als `fg_factor` (Extreme Greed dämpft, Extreme
 Fear boostet). Abfrage: `select * from sonar_leaderboard;`
 
 **Ehrliche Grenzen von v1** (Spec: „Kein Wahrsager"):
-- **SentimentPolarity = 0 (dormant)** — noch keine Sentiment-Quelle aktiv
-  (Reddit deferred, News nur Schlagzeilen).
+- **SentimentPolarity aktiv, aber dünn** (seit `0009`): Lexikon auf
+  News-Schlagzeilen, Posts folgen mit Reddit-Creds, LLM optional. Symbole
+  ohne Texte bleiben bei sp=0.
 - **MentionsMomentum** nutzt ApeWisdoms 24h-Delta, noch nicht den eigenen
   7-Tage-Schnitt — wird schärfer, sobald mehr Historie gesammelt ist.
 - **VolumeConfirmation** ist eine Volumen-*Stärke* (log-skaliert), noch kein
   Volumen-*Anstieg* gegen den eigenen Schnitt (braucht Historie).
 - **Konfidenz-Dämpfung** bei wenig absoluten Mentions; `has_volume=false` →
   nur halbe HypePenalty (fehlende Daten ≠ flaches Volumen).
+
+## Sentiment-Schicht (gebaut) — füllt SentimentPolarity
+
+Edge Function `sentiment` (Migration `0009`, Cron `:03/:33` — nach Ingest, vor
+Score). Zwei Quellen, beide schreiben normale `signals`-Zeilen mit
+`sentiment_score` (−1..+1); `sonar_score_run()` nimmt je Quelle den neuesten
+Wert im 48h-Fenster und mittelt über vorhandene Quellen:
+
+- **`sentiment_lexicon`** (keyless, läuft immer): Krypto-Lexikon mit Emoji-,
+  Phrasen- und Negations-Handling über News-Schlagzeilen und — sobald Reddit
+  aktiv ist — Post-Titel (Engagement-gewichtet). Ticker-Extraktion nur gegen
+  das bekannte Universum aus `symbol_features` (kein Symbol-Müll).
+- **`sentiment_llm`** (optional): Claude Haiku als kontextsensitiver
+  Klassifikator (versteht Sarkasmus/Slang). Nur bei
+  `SENTIMENT_LLM_ENABLED=true` + `ANTHROPIC_API_KEY` als Function Secrets,
+  sonst still.
+
+`w_sentiment` steht in `score_config` (Default 0.15). Ohne Sentiment-Zeilen
+ist `sp=0` — Scores wie zuvor, kein stiller Drift.
 
 ## Schicht 3 — Strategie-Vorschläge v1 (gebaut)
 

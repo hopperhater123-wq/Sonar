@@ -7,3 +7,7 @@ project_id = "drwueulymfgfvgslxgay"
 # schreibt aber ausschließlich mit der Service-Role. JWT-Prüfung aus,
 # damit ein Scheduler sie ohne User-Token triggern kann.
 verify_jwt = false
+
+[functions.sentiment]
+# Wie ingest: per Cron ohne User-Token triggerbar, schreibt nur mit Service-Role.
+verify_jwt = false
