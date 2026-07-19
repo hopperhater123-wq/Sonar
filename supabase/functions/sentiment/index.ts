@@ -59,20 +59,31 @@ Deno.serve(async () => {
     { auth: { persistSession: false } },
   );
 
-  const [uniRes, postsRes, newsRes] = await Promise.all([
-    db.from("symbol_features").select("symbol"),
+  const [uniRes, cfgRes, exclRes, postsRes, newsRes] = await Promise.all([
+    db.from("symbol_features").select("symbol, mentions"),
+    db.from("score_config").select("min_mentions").eq("id", 1).single(),
+    db.from("score_exclude").select("symbol"),
     db.from("social_posts").select("title, score, num_comments").gte("captured_at", since),
     db.from("news").select("title").gte("captured_at", since),
   ]);
 
-  const loadErr = uniRes.error ?? postsRes.error ?? newsRes.error;
+  const loadErr = uniRes.error ?? cfgRes.error ?? exclRes.error ?? postsRes.error ?? newsRes.error;
   if (loadErr) {
     return Response.json({ ok: false, error: loadErr.message }, { status: 500 });
   }
 
-  // Bekanntes Krypto-Universum (durch die View bereits BTC.X→BTC-normalisiert).
+  // Universum = nur SCOREFÄHIGE Symbole (Mentions >= min_mentions, nicht in
+  // score_exclude). Sentiment existiert ausschliesslich als Score-Input —
+  // Sentiment fuer nie gescorte Symbole waere Junk in signals + verschenkte
+  // API-Calls. (View liefert Symbole bereits BTC.X→BTC-normalisiert.)
+  const minMentions = (cfgRes.data as { min_mentions: number } | null)?.min_mentions ?? 2;
+  const excluded = new Set(
+    ((exclRes.data ?? []) as { symbol: string }[]).map((e) => e.symbol),
+  );
   const known = new Set<string>(
-    (uniRes.data ?? []).map((u: { symbol: string }) => u.symbol),
+    ((uniRes.data ?? []) as { symbol: string; mentions: number | null }[])
+      .filter((u) => u.mentions != null && u.mentions >= minMentions && !excluded.has(u.symbol))
+      .map((u) => u.symbol),
   );
 
   const items: TextItem[] = [
@@ -151,6 +162,7 @@ Deno.serve(async () => {
     ms: Date.now() - started,
     postsScanned: postsRes.data?.length ?? 0,
     newsScanned: newsRes.data?.length ?? 0,
+    universe: known.size, // scorefaehige Symbole (Ticker-Zielmenge)
     symbolsWithTicker: acc.size, // Kandidaten mit erkanntem Ticker (LLM-Reichweite)
     lexiconRows: lexRows.length, // davon mit Lexikon-Stichwort
     llm: { enabled: llmEnabled, hasKey: !!apiKey, rows: llmRowCount, error: llmError },

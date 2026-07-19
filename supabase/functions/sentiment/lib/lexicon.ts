@@ -34,13 +34,16 @@ const EMOJI: Record<string, number> = {
 const NEGATIONS = new Set(["not", "no", "dont", "isnt", "aint", "never", "cant", "wont"]);
 const INTENSIFIERS = new Set(["very", "super", "massive", "massively", "huge", "insanely", "extremely"]);
 
-// Englische Woerter, die als Ticker kollidieren wuerden (Praezisions-Guard).
-// "LONG": echter Datenbefund 19.07. — Token LONG matchte das Trading-Wort "long".
-// Per $CASHTAG bleiben solche Symbole weiterhin erreichbar.
+// Englische Woerter/Kuerzel, die als Ticker kollidieren wuerden (Praezisions-Guard).
+// Datenbefunde 19.07. aus echten Laeufen: LONG (Trading-Wort), dann nach der
+// LLM-Entkopplung ETF/FTX/CORE/BET/BANK/HYPE/GPT — News-Woerter, die Low-Cap-
+// Symbole trafen ("Bitcoin ETF approved" ist kein Signal fuer den ETF-Token).
+// Per $CASHTAG bleiben alle diese Symbole weiterhin erreichbar.
 const STOP = new Set([
   "ALL", "FOR", "ARE", "THE", "AND", "YOU", "GET", "NOW", "NEW", "ONE", "OUT", "BUY", "CAN",
   "HAS", "HAD", "WAS", "WHO", "WHY", "HOW", "ANY", "USE", "SEE", "OWN", "TOP", "LOW", "BIG",
   "ITS", "NOT", "BUT", "DIP", "ATH", "GEM", "APE", "FUD", "WEN", "LONG",
+  "ETF", "FTX", "CORE", "BET", "BANK", "HYPE", "GPT",
 ]);
 
 export interface TextSentiment {
