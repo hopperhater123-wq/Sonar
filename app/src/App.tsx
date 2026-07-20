@@ -244,15 +244,11 @@ export default function App() {
     chartInitDone.current = true;
   }, [data]);
 
-  if (!authReady) return <div className="center-note">Lade…</div>;
-  if (!DEMO && !session) return <Login />;
-
-  const topProposal = data?.proposals[0] ?? null;
-  const fetchKlines = DEMO ? demoKlines : fetchKlinesDb;
-
   // Motion-Layer: Leaderboard (max. 8 Blips) + juengster Vorschlag je Symbol.
   // Memoisiert auf `data` — beim Hebel-Ziehen bleibt die Referenz stabil, damit
   // der animierte Scope nicht neu aufgesetzt wird.
+  // WICHTIG: dieser Hook MUSS vor den fruehen return-Statements stehen, sonst
+  // aendert sich die Hook-Anzahl beim Login-Uebergang (React-Fehler #310).
   const contacts: Contact[] = useMemo(
     () =>
       (data?.leaderboard ?? []).slice(0, 8).map((r) => ({
@@ -265,6 +261,12 @@ export default function App() {
       })),
     [data],
   );
+
+  if (!authReady) return <div className="center-note">Lade…</div>;
+  if (!DEMO && !session) return <Login />;
+
+  const topProposal = data?.proposals[0] ?? null;
+  const fetchKlines = DEMO ? demoKlines : fetchKlinesDb;
 
   return (
     <div className="shell">
