@@ -71,11 +71,11 @@ export const NewsFeed = memo(function NewsFeed({
       )}
 
       <ul className="feed-list">
-        {news.map((n) => {
+        {news.map((n, i) => {
           const tickers = extractTickers(n.title, known);
           const lex = analyzeText(n.title);
           return (
-            <li key={n.url} className="feed-item">
+            <li key={`${n.url}-${i}`} className="feed-item">
               <a href={n.url} target="_blank" rel="noreferrer" className="feed-title">
                 {n.title}
               </a>

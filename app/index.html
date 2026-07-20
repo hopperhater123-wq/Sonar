@@ -13,9 +13,13 @@
     />
     <script>
       // Theme VOR dem ersten Paint setzen (kein Aufblitzen). ?theme= erzwingt.
+      // localStorage in try/catch: Brave/Private-Mode kann werfen — dann Default.
       (function () {
-        var q = new URLSearchParams(location.search).get("theme");
-        var t = q || localStorage.getItem("sonar-theme") || "dark";
+        var t = "dark";
+        try {
+          var q = new URLSearchParams(location.search).get("theme");
+          t = q || localStorage.getItem("sonar-theme") || "dark";
+        } catch (e) { /* Speicher blockiert — Default dark */ }
         document.documentElement.dataset.theme = t === "light" ? "light" : "dark";
       })();
     </script>

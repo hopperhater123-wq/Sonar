@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { currentTheme, toggleTheme, type Theme } from "./theme";
+import { store } from "./lib/store";
 import { DEMO_DATA, demoBacktest, demoKlines } from "./demo";
 import { MotionConfig } from "framer-motion";
 import { strengthPct } from "./lib/heat";
@@ -152,21 +153,21 @@ export default function App() {
   const [scopeSel, setScopeSel] = useState(0);
   const [scopeExpanded, setScopeExpanded] = useState(0);
   const [leverage, setLeverage] = useState(() => {
-    const v = Number(localStorage.getItem("sonar-leverage"));
+    const v = Number(store.get("sonar-leverage"));
     return Number.isFinite(v) && v >= 1 && v <= 100 ? v : 1;
   });
-  const [showIntro, setShowIntro] = useState(() => localStorage.getItem("sonar-intro-seen") !== "1");
+  const [showIntro, setShowIntro] = useState(() => store.get("sonar-intro-seen") !== "1");
   const chartInitDone = useRef(false);
 
   const closeIntro = useCallback(() => {
     setShowIntro(false);
-    localStorage.setItem("sonar-intro-seen", "1");
+    store.set("sonar-intro-seen", "1");
   }, []);
 
   const changeLeverage = useCallback((v: number) => {
     const clamped = Math.max(1, Math.min(100, Math.round(v)));
     setLeverage(clamped);
-    localStorage.setItem("sonar-leverage", String(clamped));
+    store.set("sonar-leverage", String(clamped));
   }, []);
 
   // Stabile Callbacks — sonst re-rendern die memoisierten Kinder bei jedem

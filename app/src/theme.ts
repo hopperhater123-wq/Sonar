@@ -1,4 +1,5 @@
 // Hell/Dunkel-Umschalter. Initialwert setzt index.html vor dem ersten Paint.
+import { store } from "./lib/store";
 
 export type Theme = "dark" | "light";
 
@@ -9,6 +10,6 @@ export function currentTheme(): Theme {
 export function toggleTheme(): Theme {
   const next: Theme = currentTheme() === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  localStorage.setItem("sonar-theme", next);
+  store.set("sonar-theme", next);
   return next;
 }
