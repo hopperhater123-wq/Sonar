@@ -99,6 +99,24 @@ export interface NewsRow {
   captured_at: string;
 }
 
+export interface NewsDigest {
+  summary: string;
+  sentiment: "bullish" | "bearish" | "neutral" | "mixed";
+  themes: string[];
+  fazit: string;
+  analysis: string;
+}
+
+export interface NewsDigestResponse {
+  ok: boolean;
+  model?: string;
+  headlines?: number;
+  fearGreed?: number | null;
+  digest?: NewsDigest;
+  hint?: string;
+  error?: string;
+}
+
 export interface KlineRow {
   open_time: string;
   open: number;

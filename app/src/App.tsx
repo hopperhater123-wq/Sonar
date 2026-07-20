@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { currentTheme, toggleTheme, type Theme } from "./theme";
 import { store } from "./lib/store";
-import { DEMO_DATA, demoBacktest, demoKlines } from "./demo";
+import { DEMO_DATA, demoBacktest, demoKlines, demoNewsDigest } from "./demo";
 import { MotionConfig } from "framer-motion";
 import { strengthPct } from "./lib/heat";
 import type {
@@ -14,6 +14,7 @@ import type {
   Interval,
   KlineRow,
   LeaderboardRow,
+  NewsDigestResponse,
   NewsRow,
   PaperEquityRow,
   PaperStats,
@@ -205,6 +206,23 @@ export default function App() {
     [],
   );
 
+  const runNewsDigest = useCallback(async (): Promise<NewsDigestResponse> => {
+    if (DEMO) return demoNewsDigest();
+    const { data, error } = await supabase.functions.invoke("news-digest", { body: {} });
+    if (error) {
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: Response }).context;
+        const parsed = ctx ? await ctx.json() : null;
+        if (parsed?.error) msg = String(parsed.error);
+      } catch {
+        // Original-Message behalten
+      }
+      return { ok: false, error: msg };
+    }
+    return data as NewsDigestResponse;
+  }, []);
+
   useEffect(() => {
     if (DEMO) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -361,7 +379,12 @@ export default function App() {
               fetchKlines={fetchKlines}
               proposals={data.proposals}
             />
-            <NewsFeed news={data.news} universe={data.universe} sentimentRows={data.sentimentRows} />
+            <NewsFeed
+              news={data.news}
+              universe={data.universe}
+              sentimentRows={data.sentimentRows}
+              runDigest={runNewsDigest}
+            />
           </div>
           <section className="card">
             <div className="card-head">

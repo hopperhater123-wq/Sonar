@@ -338,6 +338,19 @@ td.score { font-weight: 700; }
 .feed-title:hover { color: var(--accent); }
 .feed-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
 
+/* ── News-Digest (Claude-Analyse) ──────────────────────────────────────── */
+.digest { margin: 0 0 14px; }
+.digest-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.digest-body {
+  margin-top: 12px; border: 1px solid var(--line); border-radius: 11px;
+  padding: 13px 14px; background: var(--accent-dim);
+  display: flex; flex-direction: column; gap: 11px;
+}
+.digest-section { display: flex; flex-direction: column; gap: 3px; }
+.digest-section p { margin: 0; }
+.digest-fazit { font-weight: 600; color: var(--text); }
+.digest-themes { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* ── Leaderboard ───────────────────────────────────────────────────────── */
 .ping-col { min-width: 90px; }
 .ping-bar { width: 90px; height: 7px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }

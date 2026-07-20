@@ -1,7 +1,71 @@
-import { memo } from "react";
-import type { NewsRow, SentimentSourceRow } from "../types";
+import { memo, useState } from "react";
+import type { NewsDigestResponse, NewsRow, SentimentSourceRow } from "../types";
 import { analyzeText, extractTickers } from "../lib/lexicon";
 import { fmtNum, timeAgo, tone } from "../format";
+
+const SENT_LABEL: Record<string, { t: string; cls: string }> = {
+  bullish: { t: "bullish", cls: "pos" },
+  bearish: { t: "bearish", cls: "neg" },
+  neutral: { t: "neutral", cls: "mut" },
+  mixed: { t: "gemischt", cls: "mut" },
+};
+
+// Claude-Zusammenfassung + Fazit + Einordnung der aktuellen Nachrichtenlage.
+function DigestPanel({ runDigest }: { runDigest: () => Promise<NewsDigestResponse> }) {
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<NewsDigestResponse | null>(null);
+
+  const run = async () => {
+    setBusy(true);
+    setRes(null);
+    setRes(await runDigest());
+    setBusy(false);
+  };
+
+  return (
+    <div className="digest">
+      <div className="digest-bar">
+        <button onClick={run} disabled={busy}>
+          {busy ? "Claude analysiert…" : res ? "Neu analysieren" : "🧠 Zusammenfassung & Analyse"}
+        </button>
+        {res?.ok && res.digest && (
+          <span className={`chip ${SENT_LABEL[res.digest.sentiment]?.cls ?? "mut"}`}>
+            News-Sentiment: {SENT_LABEL[res.digest.sentiment]?.t ?? res.digest.sentiment}
+          </span>
+        )}
+      </div>
+
+      {res && !res.ok && <div className="error-box" style={{ marginTop: 10 }}>{res.error}</div>}
+
+      {res?.ok && res.digest && (
+        <div className="digest-body">
+          <div className="digest-section">
+            <span className="label">Zusammenfassung</span>
+            <p>{res.digest.summary}</p>
+          </div>
+          {res.digest.themes.length > 0 && (
+            <div className="digest-themes">
+              {res.digest.themes.map((t) => (
+                <span className="chip tick" key={t}>{t}</span>
+              ))}
+            </div>
+          )}
+          <div className="digest-section">
+            <span className="label">Fazit</span>
+            <p className="digest-fazit">{res.digest.fazit}</p>
+          </div>
+          <div className="digest-section">
+            <span className="label">Einordnung</span>
+            <p className="muted">{res.digest.analysis}</p>
+          </div>
+          <p className="muted small">
+            {res.headlines} Schlagzeilen · {res.model} · {res.hint}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // News-Feed mit Analyse-Transparenz: fuer jede Schlagzeile zeigt der Feed,
 // WOHER sie kommt (Quelle/Link), WELCHE Ticker erkannt wurden und wie das
@@ -13,10 +77,12 @@ export const NewsFeed = memo(function NewsFeed({
   news,
   universe,
   sentimentRows,
+  runDigest,
 }: {
   news: NewsRow[];
   universe: string[];
   sentimentRows: SentimentSourceRow[];
+  runDigest: () => Promise<NewsDigestResponse>;
 }) {
   const known = new Set(universe);
 
@@ -44,6 +110,8 @@ export const NewsFeed = memo(function NewsFeed({
         RSS (CoinDesk · Cointelegraph · Decrypt) → Ticker-Erkennung → Lexikon (keyless) +
         Claude Haiku (Kontext) → <code>signals</code> → SentimentPolarity im Score.
       </p>
+
+      <DigestPanel runDigest={runDigest} />
 
       {pivot.length > 0 && (
         <div className="table-wrap feed-sent">

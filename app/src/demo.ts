@@ -2,7 +2,27 @@
 // FIKTIVEN, deterministischen Daten — ohne Login, ohne echte DB-Zugriffe.
 // Zweck: UI entwickeln/reviewen (Screenshots), ohne Datenfreigabe.
 
-import type { BacktestResponse, DashboardData, Interval, KlineRow, ProposalRow } from "./types";
+import type { BacktestResponse, DashboardData, Interval, KlineRow, NewsDigestResponse, ProposalRow } from "./types";
+
+export function demoNewsDigest(): Promise<NewsDigestResponse> {
+  return Promise.resolve({
+    ok: true,
+    model: "claude-sonnet-5",
+    headlines: 40,
+    fearGreed: 28,
+    hint: "Einordnung, kein Finanzrat — du entscheidest.",
+    digest: {
+      summary:
+        "Bitcoin ringt mit der 65K-Marke, während ein Selloff bei AI-Aktien auf den Kryptomarkt übergreift und institutionelle Käufer (Strategy, Bitmine) ihre BTC/ETH-Zukäufe pausieren. Parallel laufen Infrastruktur-Themen: Cardano-Hardfork, CBDC-Pilotprojekte, ein paar Sicherheitsvorfälle.",
+      sentiment: "bearish",
+      themes: ["BTC-Schwäche unter 65K", "Institutionelle Käufe pausiert", "AI-Aktien-Kopplung", "Sicherheitsvorfälle", "CBDC & Regulierung"],
+      fazit:
+        "Kurzfristig schwaches Bild mit nachlassendem institutionellem Momentum — passt zur Fear-Stimmung, ohne klaren bullischen Katalysator.",
+      analysis:
+        "Der Fear&Greed-Wert von 28 deckt sich mit den Schlagzeilen: BTC unter Druck, dünne ETF-Zuflüsse, Käufe pausiert. Deine hohen ETH/BTC-Signale könnten eine antizyklische Chance andeuten, falls sich die Lage stabilisiert — stehen aber im Kontrast zur schwachen Nachrichtenlage. Risiken: Übergreifen des AI-Selloffs und die Sicherheitsvorfälle. Chancen eher strukturell (CBDC, Stablecoin-Adoption). Insgesamt mixed-bis-bearish, kein kurzfristiger Trendwechsel erkennbar.",
+    },
+  });
+}
 
 // Kleiner deterministischer Zufall (LCG) — gleiche Charts bei jedem Render.
 function rng(seed: number) {
