@@ -23,6 +23,7 @@ import type {
 } from "./types";
 import { ScoreScope } from "./components/ScoreScope";
 import { ContactCard } from "./components/ContactCard";
+import { IntroPanel } from "./components/IntroPanel";
 import { Login } from "./components/Login";
 import { MarketBar } from "./components/MarketBar";
 import { Briefing } from "./components/Briefing";
@@ -154,7 +155,13 @@ export default function App() {
     const v = Number(localStorage.getItem("sonar-leverage"));
     return Number.isFinite(v) && v >= 1 && v <= 100 ? v : 1;
   });
+  const [showIntro, setShowIntro] = useState(() => localStorage.getItem("sonar-intro-seen") !== "1");
   const chartInitDone = useRef(false);
+
+  const closeIntro = useCallback(() => {
+    setShowIntro(false);
+    localStorage.setItem("sonar-intro-seen", "1");
+  }, []);
 
   const changeLeverage = useCallback((v: number) => {
     const clamped = Math.max(1, Math.min(100, Math.round(v)));
@@ -276,6 +283,14 @@ export default function App() {
           )}
           <button
             className="ghost icon"
+            title="Was ist Sonar?"
+            aria-label="Was ist Sonar?"
+            onClick={() => setShowIntro((v) => !v)}
+          >
+            ?
+          </button>
+          <button
+            className="ghost icon"
             title={theme === "dark" ? "Hellmodus" : "Dunkelmodus"}
             onClick={() => setTheme(toggleTheme())}
           >
@@ -295,6 +310,8 @@ export default function App() {
       </header>
 
       {error && <div className="error-box">Fehler beim Laden: {error}</div>}
+
+      {showIntro && <IntroPanel onClose={closeIntro} />}
 
       {data && (
         <>

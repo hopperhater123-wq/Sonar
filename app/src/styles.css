@@ -45,6 +45,7 @@ body {
   color: var(--text);
   font: 14px/1.55 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden; /* Sicherheitsnetz: kein horizontales Wackeln auf Mobile */
 }
 
 /* Sonar-Ringe im Hintergrund — dezent, rein dekorativ. */
@@ -66,7 +67,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 6px 0 18px; flex-wrap: wrap;
 }
-.brand { display: flex; align-items: center; gap: 10px; font-size: 19px; letter-spacing: 0.14em; }
+.brand { display: flex; align-items: center; gap: 10px; font-size: 19px; letter-spacing: 0.14em; flex-wrap: wrap; }
 .brand strong { font-weight: 800; }
 .ping-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -118,6 +119,7 @@ h2 {
 }
 
 .grid.two { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
+.grid.two > * { min-width: 0; } /* erlaubt Kindern zu schrumpfen statt zu ueberlaufen */
 .grid.two > .card { margin-bottom: 16px; }
 @media (max-width: 1000px) { .grid.two { grid-template-columns: 1fr; } }
 
@@ -383,4 +385,40 @@ input:focus { outline: 2px solid var(--accent-dim); border-color: var(--accent);
 code {
   font-family: "JetBrains Mono", monospace; font-size: 12px;
   background: var(--accent-dim); border-radius: 5px; padding: 1px 5px;
+}
+
+/* ── Intro-Panel (privat, nach Login) ──────────────────────────────────── */
+.intro-card { position: relative; border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.intro-head { display: flex; align-items: center; gap: 10px; }
+.intro-head h2 { color: var(--accent); }
+.intro-close {
+  position: absolute; top: 10px; right: 12px; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; font-size: 13px;
+}
+.intro-close:hover { color: var(--text); transform: none; filter: none; }
+.intro-layers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin-top: 12px; }
+.intro-layer { display: flex; gap: 11px; }
+.intro-num {
+  flex: 0 0 26px; height: 26px; border-radius: 50%; background: var(--accent-dim);
+  color: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px;
+}
+
+/* ── Mobile-Feinschliff ────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .shell { padding: 14px 13px 22px; }
+  .card { padding: 14px 14px; border-radius: 13px; }
+  .topbar { padding: 4px 0 12px; }
+  .brand { font-size: 17px; }
+  .briefing-main { gap: 16px; }
+  .briefing-symbol .sym { font-size: 38px; }
+  .briefing-stats { gap: 14px 18px; }
+  .bstat { min-width: 68px; }
+  /* Enge Zahlenraster einspaltiger/zweispaltig statt gequetscht */
+  .scope-comps { grid-template-columns: 1fr; }
+  .scope-cells { grid-template-columns: repeat(2, 1fr); gap: 12px 14px; }
+  .intro-layers { grid-template-columns: 1fr; }
+  .lever-row input[type="range"] { flex: 1 1 140px; }
+  .lever-info { flex-basis: 100%; }
+  .fg-bar { width: 150px; }
 }
